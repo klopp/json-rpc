@@ -3,6 +3,7 @@
 #  Created on: 10.12.2015, 18:20:58
 #  Author: Vsevolod Lutovinov <kloppspb@bk.ru>
 # ------------------------------------------------------------------------------
+use utf8;
 use open qw/:std :utf8/;
 use Modern::Perl;
 use Carp;
@@ -224,7 +225,7 @@ sub _json_rpc {
     }
     unless ($error) {
 
-# Не самый шустрый вариант, надо бы массив методов в хэш переделат
+# Не самый шустрый вариант, надо бы массив методов в хэш переделать
 # при разборе конфига. Ну да ладно...
         $error = {
             code    => $ERR_BAD_METHOD,
@@ -240,6 +241,7 @@ sub _json_rpc {
     else {
         try {
           # Получаем что-то вроде: 'SELECT * FROM method(?,?)'
+          # Валидацией параметров особо заморачиваться не будем.
             my $callstr = sprintf $PG_SELECT, $json->{method},
                 join q{,},
                 ( (q{?}) x ( scalar @{ $json->{'params'} } ) );
