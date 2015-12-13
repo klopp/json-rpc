@@ -1,0 +1,24 @@
+{
+  daemon =>
+  {
+    listen => [ 'http://127.0.0.1:9090' ],
+    children => 10,
+  },
+
+  pg =>
+  {
+    options =>
+    {
+        AutoCommit             => 1,
+        RaiseError             => 1,
+        PrintError             => 0,
+    },
+    dbhost     =>  'localhost',
+    dbport     =>  5432,
+    dbname     =>  'jsonrpc',
+    dbuser     =>  'jsonrpc',
+    dbpass     =>  '******',
+    methods    =>  [ 'abs', 'text_le', 'text_ge' ],
+  },
+}
+
