@@ -241,7 +241,10 @@ sub _json_rpc {
         try {
           # Получаем что-то вроде: 'SELECT * FROM method(?,?)'
             my $callstr = sprintf $PG_SELECT, $json->{method},
-                join( q{,}, map {q{?}} @{ $json->{'params'} } );
+                join q{,},
+                ( (q{?}) x ( scalar @{ $json->{'params'} } ) );
+
+            #                join( q{,}, map {q{?}} @{ $json->{'params'} } );
 
             $pgstmt = $pg->prepare($callstr);
             $pgstmt->execute( @{ $json->{'params'} } );
