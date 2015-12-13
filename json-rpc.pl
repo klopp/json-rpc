@@ -43,12 +43,17 @@ $daemon->on(
     'request' => sub {
         my ( $parent, $tx ) = @_;
 
-        # => Mojo::EventEmitter::emit(request)
+# Для использования в caller, если захочется выводить в лог,
+# например. См. http://x.ato.su/d/snippets/lang/perl/anon
+# В данном случае получим 'Mojo::EventEmitter::emit(request)'
         local *__ANON__ = ( caller(1) )[3] . '(request)';
 
         my $path = $tx->req->url->path->to_string;
 
+       # А не надо было given в experimental запихивать...
         if ( $path eq '/source' ) {
+
+            # Просто выводим свой исходник:
             my $body;
             if ( open my $file, q{<}, $RealBin . q{/} . $RealScript ) {
                 local $INPUT_RECORD_SEPARATOR = undef;
@@ -66,6 +71,7 @@ $daemon->on(
         }
         elsif ( $path eq '/json' ) {
 
+            # Основная точка входа:
             $tx->res->code( _json_rpc( $parent, $tx ) );
         }
         elsif ( $path eq '/abs' ) {
@@ -113,6 +119,7 @@ $daemon->run();
 sub _pg_connect {
     my ($pgopt) = @_;
 
+    # Явно укажем имя для блоков try/catch:
     local *__ANON__ = ( caller(0) )[3];
     try {
         $pg
@@ -134,6 +141,7 @@ sub _create_daemon {
     $daemon = Mojo::Server::Prefork->new(
         'listen' => $opt->{'daemon'}->{'listen'} );
 
+    # Без особых изысков:
     $daemon->workers( $opt->{'daemon'}->{'children'} );
     $daemon->silent(1);
     $daemon->accepts(0);
@@ -168,9 +176,12 @@ sub _json_rpc {
     my $answer = {
         jsonrpc => $JSON_RPC_VER,
         server  => $JSON_RPC_SERVER,
-        id      => undef,
+
+# id в любом случае укажем явно, пусть будет null по умолчанию:
+        id => undef,
     };
 
+    # Явно укажем имя для блоков try/catch:
     local *__ANON__ = ( caller(0) )[3];
 
     if ($rq) {
@@ -212,6 +223,9 @@ sub _json_rpc {
             unless $json->{method};
     }
     unless ($error) {
+
+# Не самый шустрый вариант, надо бы массив методов в хэш переделат
+# при разборе конфига. Ну да ладно...
         $error = {
             code    => $ERR_BAD_METHOD,
             message => "Method \"$json->{method}\" is not allowed!"
@@ -225,6 +239,7 @@ sub _json_rpc {
     }
     else {
         try {
+          # Получаем что-то вроде: 'SELECT * FROM method(?,?)'
             my $callstr = sprintf $PG_SELECT, $json->{method},
                 join( q{,}, map {q{?}} @{ $json->{'params'} } );
 
@@ -233,7 +248,9 @@ sub _json_rpc {
             my $data = $pg->selectall_arrayref( $pgstmt, { Slice => {} } );
 
             $answer->{result} = $data;
-            $answer->{id}     = $json->{id};
+
+# А вот тут переносим в ответ id из запроса, если ошибок нет:
+            $answer->{id} = $json->{id};
         }
         catch {
             $answer->{error} = {
@@ -247,12 +264,16 @@ sub _json_rpc {
 
     $answer
         = encode_json($answer)
-        . "\n\nFrom Data::Printer:\n\n"
-        . p( $answer, return_value => 'dump' );
+        . "\n\nDebug, IN:\n\n"
+        . p( $json, return_value => 'dump' )
+        . "\n\nDebug, OUT:\n\n"
+        . p( $answer, return_value => 'dump' )
+        . "\n\nHTTP code: $rc";
+
     $tx->res->headers->content_length( length $answer );
     $tx->res->body($answer);
 
-    return HTTP_OK;
+    return $rc;
 }
 
 # ------------------------------------------------------------------------------
