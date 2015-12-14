@@ -57,17 +57,19 @@ $daemon->on(
 
             # Просто выводим свой исходник:
             my $body;
-            if ( open my $file, '<:encoding(utf8)', $RealBin . q{/} . $RealScript ) {
+            if ( open my $file,
+                '<:encoding(utf8)', $RealBin . q{/} . $RealScript )
+            {
                 local $INPUT_RECORD_SEPARATOR = undef;
                 $body = <$file>;
                 close $file;
                 $tx->res->code(HTTP_OK);
-                try {$body = encode_utf8($body); } catch {};
+                try { $body = encode_utf8($body); } catch {};
             }
             else {
                 $body = "Can not open \"$RealScript\": $OS_ERROR";
                 $tx->res->code(HTTP_INTERNAL_SERVER_ERROR);
-                try {$body = decode_utf8($body); } catch {};
+                try { $body = decode_utf8($body); } catch {};
             }
             $tx->res->headers->content_type('text/plain;charset=UTF-8');
             $tx->res->headers->content_length( length $body );
@@ -107,7 +109,7 @@ $daemon->on(
                 _json_rpc(
                     $parent,
                     $tx,
-                    '{"jsonrpc": "2.0", "method": "text_ge", "params": ["abc", "def"], "id": 1}'
+                    '{"jsonrpc": "2.0", "method": "text_ge", "params": ["абв", "где"], "id": 1}'
                 )
             );
         }
@@ -120,11 +122,11 @@ $daemon->on(
 $daemon->run();
 
 # ------------------------------------------------------------------------------
-sub _die
-{
+sub _die {
+
     # декодируем сообщение если оно не us-ascii
-    my ( $msg ) = @_;
-    try { $msg = decode_utf8($msg); } catch {};   
+    my ($msg) = @_;
+    try { $msg = decode_utf8($msg); } catch {};
     confess $msg;
 }
 
@@ -141,7 +143,7 @@ sub _pg_connect {
             $pgopt->{dbuser}, $pgopt->{dbpass}, $pgopt->{options} );
     }
     catch {
-        _die( "Pg connection error: $_" );
+        _die("Pg connection error: $_");
     };
 
     return $pg;
@@ -171,7 +173,7 @@ sub _get_config_data {
     $config = $ARGV[0] || $RealBin . q{/} . $config . '.conf';
 
     $opt = do $config;
-    _die( 'Invalid config data!' ) unless $opt;
+    _die('Invalid config data!') unless $opt;
     return $opt;
 }
 
@@ -182,6 +184,7 @@ sub _json_rpc {
     $tx->res->headers->content_type('text/plain;charset=UTF-8');
 
     my $request = $rq ? $rq : $tx->req->param('request');
+    try { $request = encode_utf8($request); } catch {};
 
     my $json;
     my $error;
@@ -252,8 +255,8 @@ sub _json_rpc {
     }
     else {
         try {
-          # Получаем что-то вроде: 'SELECT * FROM method(?,?)'
-          # Валидацией параметров особо заморачиваться не будем.
+# Получаем что-то вроде: 'SELECT * FROM method(?,?)'
+# Валидацией параметров особо заморачиваться не будем.
             my $callstr = sprintf $PG_SELECT, $json->{method},
                 join q{,},
                 ( (q{?}) x ( scalar @{ $json->{'params'} } ) );
@@ -287,6 +290,7 @@ sub _json_rpc {
         . p( $answer, return_value => 'dump' )
         . "\n\nHTTP code: $rc";
 
+    try { $answer = encode_utf8($answer); } catch {};
     $tx->res->headers->content_length( length $answer );
     $tx->res->body($answer);
 
