@@ -98,7 +98,7 @@ $daemon->on(
                 _json_rpc(
                     $parent,
                     $tx,
-                    '{"jsonrpc": "2.0", "method": "text_le", "params": ["abc", "def"], "id": 1}'
+                    '{"jsonrpc": "2.0", "method": "text_le", "params": ["абв", "где"], "id": 1}'
                 )
             );
         }
