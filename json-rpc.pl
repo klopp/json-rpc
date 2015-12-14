@@ -15,7 +15,7 @@ use Data::Printer sort_keys => 1;
 # ------------------------------------------------------------------------------
 use DBI;
 use JSON;
-use Encode qw/decode_utf8/;
+use Encode qw/decode_utf8 encode_utf8/;
 use FindBin qw/$RealScript $RealBin/;
 use HTTP::Status qw/:constants/;
 use Mojo::Server::Prefork;
@@ -57,15 +57,17 @@ $daemon->on(
 
             # Просто выводим свой исходник:
             my $body;
-            if ( open my $file, q{<}, $RealBin . q{/} . $RealScript ) {
+            if ( open my $file, '<:encoding(utf8)', $RealBin . q{/} . $RealScript ) {
                 local $INPUT_RECORD_SEPARATOR = undef;
                 $body = <$file>;
                 close $file;
                 $tx->res->code(HTTP_OK);
+                try {$body = encode_utf8($body); } catch {};
             }
             else {
                 $body = "Can not open \"$RealScript\": $OS_ERROR";
                 $tx->res->code(HTTP_INTERNAL_SERVER_ERROR);
+                try {$body = decode_utf8($body); } catch {};
             }
             $tx->res->headers->content_type('text/plain;charset=UTF-8');
             $tx->res->headers->content_length( length $body );
