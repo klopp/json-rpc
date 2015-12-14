@@ -15,6 +15,7 @@ use Data::Printer sort_keys => 1;
 # ------------------------------------------------------------------------------
 use DBI;
 use JSON;
+use Encode qw/decode_utf8/;
 use FindBin qw/$RealScript $RealBin/;
 use HTTP::Status qw/:constants/;
 use Mojo::Server::Prefork;
@@ -93,7 +94,7 @@ $daemon->on(
                 _json_rpc(
                     $parent,
                     $tx,
-                    '{"jsonrpc": "2.0", "method": "text_le", "params": ["aaa", "bbb"], "id": 1}'
+                    '{"jsonrpc": "2.0", "method": "text_le", "params": ["abc", "def"], "id": 1}'
                 )
             );
         }
@@ -104,7 +105,7 @@ $daemon->on(
                 _json_rpc(
                     $parent,
                     $tx,
-                    '{"jsonrpc": "2.0", "method": "text_ge", "params": ["aaa", "bbb"], "id": 1}'
+                    '{"jsonrpc": "2.0", "method": "text_ge", "params": ["abc", "def"], "id": 1}'
                 )
             );
         }
@@ -115,6 +116,14 @@ $daemon->on(
     }
 );
 $daemon->run();
+
+# ------------------------------------------------------------------------------
+sub _die
+{
+    my ( $msg ) = @_;
+    try { $msg = decode_utf8($msg); } catch {};   
+    confess $msg;
+}
 
 # ------------------------------------------------------------------------------
 sub _pg_connect {
@@ -129,7 +138,7 @@ sub _pg_connect {
             $pgopt->{dbuser}, $pgopt->{dbpass}, $pgopt->{options} );
     }
     catch {
-        confess "Pg connection error: $_";
+        _die( "Pg connection error: $_" );
     };
 
     return $pg;
@@ -159,7 +168,7 @@ sub _get_config_data {
     $config = $ARGV[0] || $RealBin . q{/} . $config . '.conf';
 
     $opt = do $config;
-    confess 'Invalid config data!' unless $opt;
+    _die( 'Invalid config data!' ) unless $opt;
     return $opt;
 }
 
